@@ -9,8 +9,12 @@ This has some key benefits over direct filesystem access:
 
 ## Use cases:
 * Create a pool of shared media with colleagues and family. Then mount the whole library in some external media player like Jellyfin
-* Expose a user's storage as a Samba share without worrying about consistency with Nextcloud. 
-* Use powerful third-party server tools for processing and organizing data and see changes immediately reflected  in Nextcloud
+* Expose a user's storage as a Samba share without worrying about consistency with Nextcloud.
+* Replace an existing WebDAV mount. Benchmarks are needed, but chances are this solution here will perform a LOT better
+* Use powerful third-party server tools for processing and organizing data and see changes immediately reflected in Nextcloud
+
+## Usage
+This app has no GUI and probably won't ever need one. For now, it just ships a new CLI command called `files:fuse-mount`
 
 ## Caveats
 This a very very rudimentary implementation. It currently supports:
