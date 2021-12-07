@@ -1,0 +1,8 @@
+{
+	"prefer-stable": true,
+	"minimum-stability": "stable",
+	"require": {
+		"sj-i/php-fuse": "dev-master",
+		"sj-i/phpdoc-type-reader": "dev-master as v0.1.1"
+	}
+}
