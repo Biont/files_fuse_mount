@@ -8,7 +8,7 @@ This has some key benefits over direct filesystem access:
 * No rescan of file changes required
 
 ## Use cases:
-* Create a pool of shared media with colleagues and family. Then ount the whole library in some external media player like Jellyfin
+* Create a pool of shared media with colleagues and family. Then mount the whole library in some external media player like Jellyfin
 * Expose a user's storage as a Samba share without worrying about consistency with Nextcloud. 
 * Use powerful third-party server tools for processing and organizing data and see changes immediately reflected  in Nextcloud
 
