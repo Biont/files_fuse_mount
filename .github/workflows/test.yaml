@@ -1,0 +1,130 @@
+name: Test
+
+on:
+    pull_request:
+    push:
+        branches:
+            - master
+            - stable*
+
+jobs:
+    unit-tests:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+#                php-versions: [7.3, 7.4]
+#                nextcloud-versions: ['stable21', 'stable22', 'stable23', 'master']
+                php-versions: [7.4]
+                nextcloud-versions: [stable23]
+                include:
+                    - php: 8.0
+                      nextcloud-version: master
+        name: Nextcloud ${{ matrix.nextcloud-versions }} php${{ matrix.php-versions }} unit tests
+        steps:
+            - name: Set up php${{ matrix.php-versions }}
+              uses: shivammathur/setup-php@2.16.0
+              with:
+                  php-version: ${{ matrix.php-versions }}
+                  #tools: composer:v1
+                  #extensions: ctype,curl,dom,gd,iconv,intl,json,mbstring,openssl,posix,sqlite,xml,zip,gmp
+                  #coverage: xdebug
+            - name: Checkout Nextcloud
+              run: git clone https://github.com/nextcloud/server.git --recursive --depth 1 -b ${{ matrix.nextcloud-versions }} nextcloud
+            - name: Install Nextcloud
+              run: php -f nextcloud/occ maintenance:install --database-name oc_autotest --database-user oc_autotest --admin-user admin --admin-pass admin --database sqlite --database-pass=''
+            - name: Checkout Files FUSE Mount
+              uses: actions/checkout@master
+              with:
+                  path: nextcloud/apps/files_fuse_mount
+            - name: Install dependencies
+              working-directory: nextcloud/apps/files_fuse_mount
+              run: composer install
+            - name: Run tests
+              working-directory: nextcloud/apps/files_fuse_mount
+              run: composer run test:unit
+              env:
+                  XDEBUG_MODE: coverage
+            - name: Report coverage
+              uses: codecov/codecov-action@v2.1.0
+              if: ${{ always() && matrix.nextcloud-versions == 'master' }}
+              with:
+                  file: ./nextcloud/apps/files_fuse_mount/tests/clover.unit.xml
+                  flags: unittests
+                  fail_ci_if_error: true
+
+    integration-tests:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                php-versions: [7.4, 8.0]
+                nextcloud-versions: ['master']
+                db: ['sqlite', 'mysql', 'pgsql']
+        name: php${{ matrix.php-versions }}-${{ matrix.db }} integration tests
+        services:
+            mysql-service:
+                image: mariadb:10.5
+                env:
+                    MYSQL_ROOT_PASSWORD: my-secret-pw
+                    MYSQL_DATABASE: nextcloud
+                    MYSQL_USER: nextcloud
+                    MYSQL_PASSWORD: nextcloud
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd="mysqladmin ping"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=3
+            postgres-service:
+                image: postgres
+                env:
+                    POSTGRES_USER: nextcloud
+                    POSTGRES_DB: nextcloud
+                    POSTGRES_PASSWORD: nextcloud
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        steps:
+            - name: Set up php${{ matrix.php-versions }}
+              uses: shivammathur/setup-php@master
+              with:
+                  php-version: ${{ matrix.php-versions }}
+                  tools: composer:v2
+                  extensions: ctype,curl,dom,gd,iconv,intl,json,mbstring,openssl,posix,sqlite,xml,zip,gmp
+                  coverage: xdebug
+            - name: Checkout Nextcloud
+              run: git clone https://github.com/nextcloud/server.git --recursive --depth 1 -b ${{ matrix.nextcloud-versions }} nextcloud
+            - name: Install Nextcloud
+              run: php -f nextcloud/occ maintenance:install --database-host 127.0.0.1 --database-name nextcloud --database-user nextcloud --database-pass nextcloud --admin-user admin --admin-pass admin --database ${{ matrix.db }}
+            - name: Checkout Mail
+              uses: actions/checkout@master
+              with:
+                  path: nextcloud/apps/files_fuse_mount
+            - name: Install dependencies
+              working-directory: nextcloud/apps/files_fuse_mount
+              run: composer install
+            - name: Install Files FUSE Mount
+              run: php -f nextcloud/occ app:enable files_fuse_mount
+            - name: Configure Nextcloud for testing
+              run: php -f nextcloud/occ config:system:set debug --type bool --value true
+            - name: Run tests
+              working-directory: nextcloud/apps/files_fuse_mount
+              run: composer run test:integration
+              env:
+                  XDEBUG_MODE: coverage
+            - name: Print debug logs
+              if: ${{ always() }}
+              run: cat nextcloud/data/horde_*.log
+            - name: Report coverage
+              uses: codecov/codecov-action@v2.1.0
+              if: ${{ always() && matrix.db == 'mysql' }}
+              with:
+                  file: ./nextcloud/apps/files_fuse_mount/tests/clover.integration.xml
+                  flags: integrationtests
+                  fail_ci_if_error: true
+        env:
+            CI: true

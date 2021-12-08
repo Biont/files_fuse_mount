@@ -4,5 +4,22 @@
 	"require": {
 		"sj-i/php-fuse": "dev-master",
 		"sj-i/phpdoc-type-reader": "dev-master as v0.1.1"
+	},
+	"require-dev": {
+		"christophwurst/nextcloud": "^21.0.0",
+		"phpunit/phpunit": "^9.5",
+		"psalm/phar": "^4.6",
+		"roave/security-advisories": "dev-master"
+	},
+	"scripts": {
+		"cs:check": "php-cs-fixer fix --dry-run --diff",
+		"cs:fix": "php-cs-fixer fix",
+		"lint": "find . -name \\*.php -not -path './vendor/*' -print0 | xargs -0 -n1 php -l",
+		"psalm": "psalm.phar",
+		"psalm:fix": "psalm.phar --alter --issues=InvalidReturnType,InvalidNullableReturnType,MismatchingDocblockParamType,MismatchingDocblockReturnType,MissingParamType,InvalidFalsableReturnType",
+		"test:integration": "phpunit -c tests/phpunit.integration.xml --fail-on-warning",
+		"test:integration:dev": "phpunit -c tests/phpunit.integration.xml --no-coverage --order-by=defects --stop-on-defect --fail-on-warning --stop-on-error --stop-on-failure",
+		"test:unit": "phpunit -c tests/phpunit.unit.xml --fail-on-warning",
+		"test:unit:dev": "phpunit -c tests/phpunit.unit.xml --no-coverage --order-by=defects --stop-on-defect --fail-on-warning --stop-on-error --stop-on-failure"
 	}
 }
