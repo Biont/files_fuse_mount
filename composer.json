@@ -9,7 +9,16 @@
 		"christophwurst/nextcloud": "^21.0.0",
 		"phpunit/phpunit": "^9.5",
 		"psalm/phar": "^4.6",
-		"roave/security-advisories": "dev-master"
+		"roave/security-advisories": "dev-master",
+		"mockery/mockery": "^1.4",
+		"symfony/console": "^5.4"
+	},
+	"autoload": {
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"OCA\\FuseMount\\": "lib"
+		}
 	},
 	"scripts": {
 		"cs:check": "php-cs-fixer fix --dry-run --diff",

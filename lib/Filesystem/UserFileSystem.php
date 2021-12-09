@@ -6,12 +6,14 @@ namespace OCA\FuseMount\Filesystem;
 
 use Fuse\FilesystemDefaultImplementationTrait;
 use Fuse\FilesystemInterface;
+use Fuse\FuseOperations;
 use Fuse\Libc\Fuse\FuseFileInfo;
 use Fuse\Libc\Fuse\FuseFillDir;
 use Fuse\Libc\Fuse\FuseReadDirBuffer;
 use Fuse\Libc\String\CBytesBuffer;
 use Fuse\Libc\Sys\Stat\Stat;
 use Fuse\Libc\Time\TimeSpec;
+use Fuse\Libc\Utime\UtimBuf;
 use OC\Files\Cache\HomeCache;
 use OC\Files\Filesystem;
 use OC\Files\Node\File;
@@ -23,10 +25,8 @@ use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
 use OCP\Lock\LockedException;
 
-class NextcloudFilesystem implements FilesystemInterface
+class UserFileSystem implements FilesystemInterface
 {
-
-	use FilesystemDefaultImplementationTrait;
 
 	use FilesystemDefaultImplementationTrait;
 
@@ -34,9 +34,36 @@ class NextcloudFilesystem implements FilesystemInterface
 
 	private HomeCache $homeCache;
 
-	public function __construct(Folder $rootNode)
+	private string $userId;
+
+	public function __construct(string $userId, Folder $rootNode)
 	{
 		$this->rootNode = $rootNode;
+		$this->userId = $userId;
+	}
+
+	public function getOperations(): FuseOperations
+	{
+		$fuseOperations = new FuseOperations();
+		$fuseOperations->getattr = [$this, 'getattr'];
+		$fuseOperations->open = [$this, 'open'];
+		$fuseOperations->read = [$this, 'read'];
+		$fuseOperations->readdir = [$this, 'readdir'];
+		$fuseOperations->write = [$this, 'write'];
+		$fuseOperations->truncate = [$this, 'truncate'];
+		$fuseOperations->ftruncate = [$this, 'ftruncate'];
+		$fuseOperations->flush = [$this, 'flush'];
+		$fuseOperations->getxattr = [$this, 'getxattr'];
+		$fuseOperations->removexattr = [$this, 'removexattr'];
+		$fuseOperations->mknod = [$this, 'mknod'];
+		$fuseOperations->mkdir = [$this, 'mkdir'];
+		$fuseOperations->unlink = [$this, 'unlink'];
+		$fuseOperations->utime = [$this, 'utime'];
+		//$fuseOperations->utimens = [$this, 'utimens'];
+		$fuseOperations->chown = [$this, 'chown'];
+		$fuseOperations->chmod = [$this, 'chmod'];
+
+		return $fuseOperations;
 	}
 
 	public function getattr(string $path, Stat $stat): int
@@ -118,7 +145,7 @@ class NextcloudFilesystem implements FilesystemInterface
 		 * -> Clean and reload mount points
 		 */
 		Filesystem::clearMounts();
-		Filesystem::initMountPoints('admin');
+		Filesystem::initMountPoints($this->userId);
 
 		try {
 			$filler($buf, '.', null, 0);
@@ -142,6 +169,21 @@ class NextcloudFilesystem implements FilesystemInterface
 		try {
 			$node->putContent('');
 		} catch (GenericFileException|NotPermittedException|LockedException $e) {
+			return -1;
+		}
+
+		return 0;
+	}
+
+	public function ftruncate(string $path, int $offset, FuseFileInfo $fuse_file_info): int{
+		try {
+			$node = $this->rootNode->get($path);
+			assert($node instanceof File);
+			$res = $node->fopen('rw+');
+			ftruncate($res, $offset);
+			fclose($res);
+			$node->touch();
+		} catch (LockedException|NotPermittedException $e) {
 			return -1;
 		}
 
@@ -204,6 +246,7 @@ class NextcloudFilesystem implements FilesystemInterface
 		} catch (NotPermittedException $e) {
 			return -1;
 		}
+
 		return 0;
 	}
 
@@ -220,14 +263,35 @@ class NextcloudFilesystem implements FilesystemInterface
 		return 0;
 	}
 
-	//public function utime(string $path, UtimBuf $utime_buf): int{
-	//	echo __FUNCTION__.': '.$path.PHP_EOL;
-	//	return 0;
-	//
-	//}
-	//
-	//public function chown(string $path, int $uid, int $gid): int{
-	//	echo __FUNCTION__.': '.$path.PHP_EOL;
-	//	return 0;
-	//}
+	public function utime(string $path, UtimBuf $utime_buf): int{
+		try {
+			$node=$this->rootNode->get($path);
+			$utime_buf->actime=$node->getMTime();
+			$utime_buf->modtime=$node->getMTime();
+			return 0;
+		} catch (InvalidPathException|NotPermittedException $e) {
+			return -1;
+		} catch (NotFoundException $e) {
+			return -2;
+		}
+
+	}
+	public function chmod(string $path, int $mode): int{
+		echo __FUNCTION__.': '.$path.PHP_EOL;
+		return 0;
+	}
+	public function chown(string $path, int $uid, int $gid): int{
+		echo __FUNCTION__.': '.$path.PHP_EOL;
+		return 0;
+	}
+
+	public function getNodeSize(string $path)
+	{
+		return $this->rootNode->get($path)->getSize();
+	}
+
+	public function getNodeMTime(string $path)
+	{
+		return $this->rootNode->get($path)->getMTime();
+	}
 }
