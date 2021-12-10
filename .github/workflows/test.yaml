@@ -117,7 +117,7 @@ jobs:
             - name: Configure Nextcloud for testing
               run: php -f nextcloud/occ config:system:set debug --type bool --value true
             - name: Mount the file system
-              run: mkdir mnt && php -f nextcloud/occ files:fuse_mount --user=admin --user=user mnt
+              run: mkdir mnt && php -f nextcloud/occ files:fuse-mount --user=admin --user=user mnt
             - name: Run tests
               working-directory: nextcloud/apps/files_fuse_mount
               run: |
