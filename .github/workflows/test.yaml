@@ -118,11 +118,10 @@ jobs:
               run: php -f nextcloud/occ app:enable files_fuse_mount
             - name: Configure Nextcloud for testing
               run: php -f nextcloud/occ config:system:set debug --type bool --value true
-            - name: Mount the file system
-              run: mkdir mnt && php -f nextcloud/occ files:fuse-mount --user=admin --user=user ${GITHUB_WORKSPACE}/mnt
             - name: Run tests
               working-directory: nextcloud/apps/files_fuse_mount
               run: |
+                mkdir mnt && php -f nextcloud/occ files:fuse-mount --user=admin --user=user ${GITHUB_WORKSPACE}/mnt &
                 export FUSE_MOUNT_DIR=${GITHUB_WORKSPACE}/mnt
                 export NC_USER_1=admin
                 export NC_USER_2=user
