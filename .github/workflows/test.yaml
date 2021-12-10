@@ -119,13 +119,12 @@ jobs:
             - name: Configure Nextcloud for testing
               run: php -f nextcloud/occ config:system:set debug --type bool --value true
             - name: Run tests
-              working-directory: nextcloud/apps/files_fuse_mount
               run: |
                 mkdir mnt && php -f nextcloud/occ files:fuse-mount --user=admin --user=user ${GITHUB_WORKSPACE}/mnt &
                 export FUSE_MOUNT_DIR=${GITHUB_WORKSPACE}/mnt
                 export NC_USER_1=admin
                 export NC_USER_2=user
-                composer run test:integration
+                cd nextcloud/apps/files_fuse_mount && composer run test:integration
               env:
                   XDEBUG_MODE: coverage
 #            - name: Print debug logs
