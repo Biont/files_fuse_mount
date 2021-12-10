@@ -7,6 +7,7 @@ namespace OCA\FuseMount\Tests\Unit\Filesystem;
 use OCA\FuseMount\Filesystem\DelegatingUserFilesystem;
 use OCA\FuseMount\Filesystem\UserFileSystem;
 use PHPUnit\Framework\TestCase;
+use OC\Files\View;
 
 class DelegatingUserFilesystemTest extends TestCase
 {
@@ -14,7 +15,8 @@ class DelegatingUserFilesystemTest extends TestCase
 	public function testDelegation()
 	{
 		$userFs = \Mockery::mock(UserFileSystem::class);
-		$delegatingFs = new DelegatingUserFilesystem();
+		$view = \Mockery::mock(View::class);
+		$delegatingFs = new DelegatingUserFilesystem($view);
 		$delegatingFs->pushUserFilesystem('foo', $userFs);
 		$result = 42;
 		$userFs->expects('mknod')->once()->andReturn($result);
