@@ -2,12 +2,25 @@
 
 declare(strict_types=1);
 
-define('PHPUNIT_RUN', 1);
+(function(){
+	$ncAutoloadFile=__DIR__.'/../../../lib/autoloader.php';
+	class OC
+	{
 
-require_once __DIR__.'/../../../lib/base.php';
-require_once __DIR__.'/../vendor/autoload.php';
+		public static $SERVERROOT = '';
 
-\OC::$loader->addValidRoot(OC::$SERVERROOT . '/tests');
-\OC_App::loadApp('files_fuse_mount');
+		public static $CLASSPATH = [];
+	}
 
-OC_Hook::clear();
+	OC::$SERVERROOT = str_replace("\\", '/', substr(dirname($ncAutoloadFile), 0, -4));
+	require_once OC::$SERVERROOT . '/lib/composer/autoload.php';
+	require_once $ncAutoloadFile;
+	require_once OC::$SERVERROOT. '/3rdparty/autoload.php';
+	$ncAutoloader = new \OC\Autoloader([
+		'/lib/private/legacy',
+	]);
+	$ncAutoloader->addValidRoot(OC::$SERVERROOT.'/tests');
+	spl_autoload_register([$ncAutoloader, 'load']);
+	require_once __DIR__.'/../vendor/autoload.php';
+})();
+

@@ -6,6 +6,7 @@ namespace OCA\FuseMount\Filesystem;
 
 use Fuse\FilesystemInterface;
 use Fuse\FuseOperations;
+use Fuse\Libc\Errno\Errno;
 use Fuse\Libc\Fcntl\Flock;
 use Fuse\Libc\Fuse\FuseBufVec;
 use Fuse\Libc\Fuse\FuseConnInfo;
@@ -25,12 +26,21 @@ use Fuse\Libc\Sys\StatVfs\StatVfs;
 use Fuse\Libc\Time\TimeSpec;
 use Fuse\Libc\Utime\UtimBuf;
 use OC\Files\Filesystem;
+use OC\Files\View;
 use OCA\FuseMount\Filesystem\UserFileSystem;
 use OCP\Files\Folder;
+use OCP\Lock\LockedException;
 use TypedCData\TypedCDataArray;
 
 class DelegatingUserFilesystem implements FilesystemInterface
 {
+
+	private View $rootView;
+
+	public function __construct(View $rootView)
+	{
+		$this->rootView = $rootView;
+	}
 
 	/**
 	 * @var UserFileSystem[]
@@ -115,6 +125,11 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		return $smallest;
 	}
 
+	private function isRootOrFirstLevel(string $path): bool
+	{
+		return $path === '/' || $this->isFirstLevel($path);
+	}
+
 	private function isFirstLevel(string $path): bool
 	{
 		$segments = array_filter(explode(DIRECTORY_SEPARATOR, $path));
@@ -140,127 +155,194 @@ class DelegatingUserFilesystem implements FilesystemInterface
 
 	public function readlink(string $path, CStringBuffer $buffer, int $size): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function getdir(string $path, FuseDirHandle $dirhandle, FuseDirFill $dirfill): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function mknod(string $path, int $mode, int $dev): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function mkdir(string $path, int $mode): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function unlink(string $path): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function rmdir(string $path): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function symlink(string $path, string $link): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function rename(string $from, string $to): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		if ($this->getUserFromPath($from) !== $this->getUserFromPath($to)) {
+			$u1 = $this->getUserFromPath($from);
+			$u2 = $this->getUserFromPath($to);
+			$from = '/'.$u1.'/files/'.$this->getSubPath($from);
+			$to = '/'.$u2.'/files/'.$this->getSubPath($to);
+			try {
+				$result = $this->rootView->rename($from, $to);
+			} catch (LockedException $e) {
+				return -1;
+			}
+
+			return $result
+				? 0
+				: -1;
+		}
+		$to = $this->getSubPath($to);
+
+		return $this->isRootOrFirstLevel($from)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, [$from, $to]);
 	}
 
 	public function link(string $path, string $link): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function chmod(string $path, int $mode): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function chown(string $path, int $uid, int $gid): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function truncate(string $path, int $offset): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function utime(string $path, UtimBuf $utime_buf): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function open(string $path, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function read(string $path, CBytesBuffer $buffer, int $size, int $offset, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function write(string $path, string $buffer, int $size, int $offset, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function statfs(string $path, StatVfs $statvfs): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function flush(string $path, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function release(string $path, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function fsync(string $path, int $flags, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function setxattr(string $path, string $name, string $value, int $size): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function getxattr(string $path, string $name, ?string &$value, int $size): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function listxattr(string $path, ?string &$value, int $size): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function removexattr(string $path, string $name): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function opendir(string $path, FuseFileInfo $fuse_file_info): int
 	{
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function readdir(
@@ -298,14 +380,18 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		string $path,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function fsyncdir(
 		string $path,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function init(
@@ -324,7 +410,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		string $path,
 		int $mode
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function create(
@@ -332,7 +420,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $mode,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function ftruncate(
@@ -340,7 +430,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $offset,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function fgetattr(
@@ -348,7 +440,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		Stat $stat,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function lock(
@@ -357,14 +451,18 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $cmd,
 		Flock $flock
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function utimens(
 		string $path,
 		TypedCDataArray $tv
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function bmap(
@@ -372,7 +470,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $blocksize,
 		int &$idx
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function setFlagNullpathOk(
@@ -383,19 +483,17 @@ class DelegatingUserFilesystem implements FilesystemInterface
 
 	public function getFlagNullpathOk(): bool
 	{
-		//TODO Figure out what this does
+		return false;
 	}
 
-	public
-	function setFlagNopath(
-		bool $flag
-	): void {
+	public function setFlagNopath(bool $flag): void
+	{
 		//TODO Figure out what this does
 	}
 
 	public function getFlagNopath(): bool
 	{
-		//TODO Figure out what this does
+		return false;
 	}
 
 	public function setFlagUtimeOmitOk(
@@ -406,7 +504,7 @@ class DelegatingUserFilesystem implements FilesystemInterface
 
 	public function getFlagUtimeOmitOk(): bool
 	{
-		//TODO Figure out what this does
+		return false;
 	}
 
 	public function ioctl(
@@ -417,7 +515,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $flags,
 		FuseIoctlDataPointer $data
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function poll(
@@ -426,7 +526,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		FusePollHandle $fuse_pollhandle,
 		int &$reventsp
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function writeBuf(
@@ -435,7 +537,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $offset,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function readBuf(
@@ -445,7 +549,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $offset,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function flock(
@@ -453,7 +559,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		FuseFileInfo $fuse_file_info,
 		int $op
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function fallocate(
@@ -462,7 +570,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		int $offset,
 		FuseFileInfo $fuse_file_info
 	): int {
-		return $this->delegateCall(__FUNCTION__, func_get_args());
+		return $this->isRootOrFirstLevel($path)
+			? -Errno::ENOSYS
+			: $this->delegateCall(__FUNCTION__, func_get_args());
 	}
 
 	public function getOperations(): FuseOperations
@@ -476,8 +586,9 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		$fuseOperations->truncate = [$this, 'truncate'];
 		$fuseOperations->ftruncate = [$this, 'ftruncate'];
 		$fuseOperations->flush = [$this, 'flush'];
-		$fuseOperations->getxattr = [$this, 'getxattr'];
-		$fuseOperations->removexattr = [$this, 'removexattr'];
+		$fuseOperations->rename = [$this, 'rename'];
+		//$fuseOperations->getxattr = [$this, 'getxattr'];
+		//$fuseOperations->removexattr = [$this, 'removexattr'];
 		$fuseOperations->mknod = [$this, 'mknod'];
 		$fuseOperations->mkdir = [$this, 'mkdir'];
 		$fuseOperations->unlink = [$this, 'unlink'];

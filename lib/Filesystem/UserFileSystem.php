@@ -14,9 +14,9 @@ use Fuse\Libc\String\CBytesBuffer;
 use Fuse\Libc\Sys\Stat\Stat;
 use Fuse\Libc\Time\TimeSpec;
 use Fuse\Libc\Utime\UtimBuf;
-use OC\Files\Cache\HomeCache;
 use OC\Files\Filesystem;
 use OC\Files\Node\File;
+use OC\Files\View;
 use OCP\Files\Folder;
 use OCP\Files\GenericFileException;
 use OCP\Files\InvalidPathException;
@@ -32,14 +32,15 @@ class UserFileSystem implements FilesystemInterface
 
 	private Folder $rootNode;
 
-	private HomeCache $homeCache;
-
 	private string $userId;
+
+	private View $view;
 
 	public function __construct(string $userId, Folder $rootNode)
 	{
 		$this->rootNode = $rootNode;
 		$this->userId = $userId;
+		$this->view = new View($rootNode->getPath()); // Only needed for rename.
 	}
 
 	public function getOperations(): FuseOperations
@@ -53,8 +54,9 @@ class UserFileSystem implements FilesystemInterface
 		$fuseOperations->truncate = [$this, 'truncate'];
 		$fuseOperations->ftruncate = [$this, 'ftruncate'];
 		$fuseOperations->flush = [$this, 'flush'];
-		$fuseOperations->getxattr = [$this, 'getxattr'];
-		$fuseOperations->removexattr = [$this, 'removexattr'];
+		$fuseOperations->rename = [$this, 'rename'];
+		//$fuseOperations->getxattr = [$this, 'getxattr'];
+		//$fuseOperations->removexattr = [$this, 'removexattr'];
 		$fuseOperations->mknod = [$this, 'mknod'];
 		$fuseOperations->mkdir = [$this, 'mkdir'];
 		$fuseOperations->unlink = [$this, 'unlink'];
@@ -175,7 +177,8 @@ class UserFileSystem implements FilesystemInterface
 		return 0;
 	}
 
-	public function ftruncate(string $path, int $offset, FuseFileInfo $fuse_file_info): int{
+	public function ftruncate(string $path, int $offset, FuseFileInfo $fuse_file_info): int
+	{
 		try {
 			$node = $this->rootNode->get($path);
 			assert($node instanceof File);
@@ -211,6 +214,21 @@ class UserFileSystem implements FilesystemInterface
 		}
 
 		return $size;
+	}
+
+	public function rename(string $from, string $to): int
+	{
+		try {
+			$result = $this->view->rename($from, $to);
+			//$result = $this->rootNode->get($from)->getStorage()->rename('/files/'.$from, '/files/'.$to);
+		} catch (NotFoundException $e) {
+			return -1;
+		}
+		if (!$result) {
+			return -1;
+		}
+
+		return 0;
 	}
 
 	//public function getxattr(string $path, string $name, ?string &$value, int $size): int
@@ -263,34 +281,49 @@ class UserFileSystem implements FilesystemInterface
 		return 0;
 	}
 
-	public function utime(string $path, UtimBuf $utime_buf): int{
+	public function utime(string $path, UtimBuf $utime_buf): int
+	{
 		try {
-			$node=$this->rootNode->get($path);
-			$utime_buf->actime=$node->getMTime();
-			$utime_buf->modtime=$node->getMTime();
+			$node = $this->rootNode->get($path);
+			$utime_buf->actime = $node->getMTime();
+			$utime_buf->modtime = $node->getMTime();
+
 			return 0;
 		} catch (InvalidPathException|NotPermittedException $e) {
 			return -1;
 		} catch (NotFoundException $e) {
 			return -2;
 		}
+	}
 
-	}
-	public function chmod(string $path, int $mode): int{
+	public function chmod(string $path, int $mode): int
+	{
 		echo __FUNCTION__.': '.$path.PHP_EOL;
-		return 0;
-	}
-	public function chown(string $path, int $uid, int $gid): int{
-		echo __FUNCTION__.': '.$path.PHP_EOL;
+
 		return 0;
 	}
 
-	public function getNodeSize(string $path)
+	public function chown(string $path, int $uid, int $gid): int
+	{
+		echo __FUNCTION__.': '.$path.PHP_EOL;
+
+		return 0;
+	}
+
+	/**
+	 * @throws NotFoundException
+	 * @throws InvalidPathException
+	 */
+	public function getNodeSize(string $path): int
 	{
 		return $this->rootNode->get($path)->getSize();
 	}
 
-	public function getNodeMTime(string $path)
+	/**
+	 * @throws NotFoundException
+	 * @throws InvalidPathException
+	 */
+	public function getNodeMTime(string $path): int
 	{
 		return $this->rootNode->get($path)->getMTime();
 	}

@@ -3,7 +3,8 @@
 	"minimum-stability": "stable",
 	"require": {
 		"sj-i/php-fuse": "dev-master",
-		"sj-i/phpdoc-type-reader": "dev-master as v0.1.1"
+		"sj-i/phpdoc-type-reader": "dev-master as v0.1.1",
+		"christophwurst/nextcloud_testing": "^0.12.4"
 	},
 	"require-dev": {
 		"christophwurst/nextcloud": "^21.0.0",

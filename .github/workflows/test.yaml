@@ -56,9 +56,12 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                php-versions: [7.4, 8.0]
+#                php-versions: [7.4, 8.0]
+#                nextcloud-versions: ['master']
+#                db: ['sqlite', 'mysql', 'pgsql']
+                php-versions: [7.4]
                 nextcloud-versions: ['master']
-                db: ['sqlite', 'mysql', 'pgsql']
+                db: ['mysql']
         name: php${{ matrix.php-versions }}-${{ matrix.db }} integration tests
         services:
             mysql-service:
@@ -100,7 +103,9 @@ jobs:
               run: git clone https://github.com/nextcloud/server.git --recursive --depth 1 -b ${{ matrix.nextcloud-versions }} nextcloud
             - name: Install Nextcloud
               run: php -f nextcloud/occ maintenance:install --database-host 127.0.0.1 --database-name nextcloud --database-user nextcloud --database-pass nextcloud --admin-user admin --admin-pass admin --database ${{ matrix.db }}
-            - name: Checkout Mail
+            - name: Add a second user
+              run: OC_PASS=user php -f nextcloud/occ user:add --password-from-env user
+            - name: Checkout Plugin
               uses: actions/checkout@master
               with:
                   path: nextcloud/apps/files_fuse_mount
@@ -111,20 +116,26 @@ jobs:
               run: php -f nextcloud/occ app:enable files_fuse_mount
             - name: Configure Nextcloud for testing
               run: php -f nextcloud/occ config:system:set debug --type bool --value true
+            - name: Mount the file system
+              run: mkdir mnt && php -f nextcloud/occ files:fuse_mount --user=admin --user=user mnt
             - name: Run tests
               working-directory: nextcloud/apps/files_fuse_mount
-              run: composer run test:integration
+              run: |
+                export FUSE_MOUNT_DIR=mnt
+                export NC_USER_1=admin
+                export NC_USER_2=user
+                composer run test:integration
               env:
                   XDEBUG_MODE: coverage
-            - name: Print debug logs
-              if: ${{ always() }}
-              run: cat nextcloud/data/horde_*.log
-            - name: Report coverage
-              uses: codecov/codecov-action@v2.1.0
-              if: ${{ always() && matrix.db == 'mysql' }}
-              with:
-                  file: ./nextcloud/apps/files_fuse_mount/tests/clover.integration.xml
-                  flags: integrationtests
-                  fail_ci_if_error: true
+#            - name: Print debug logs
+#              if: ${{ always() }}
+#              run: cat nextcloud/data/horde_*.log
+#            - name: Report coverage
+#              uses: codecov/codecov-action@v2.1.0
+#              if: ${{ always() && matrix.db == 'mysql' }}
+#              with:
+#                  file: ./nextcloud/apps/files_fuse_mount/tests/clover.integration.xml
+#                  flags: integrationtests
+#                  fail_ci_if_error: true
         env:
             CI: true

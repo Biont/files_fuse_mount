@@ -6,14 +6,13 @@ namespace OCA\FuseMount\Tests\Unit\Filesystem;
 
 use OCA\FuseMount\Filesystem\DelegatingUserFilesystem;
 use OCA\FuseMount\Filesystem\UserFileSystem;
-use Test\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class DelegatingUserFilesystemTest extends TestCase
 {
 
 	public function testDelegation()
 	{
-		//$this->markTestSkipped();
 		$userFs = \Mockery::mock(UserFileSystem::class);
 		$delegatingFs = new DelegatingUserFilesystem();
 		$delegatingFs->pushUserFilesystem('foo', $userFs);
