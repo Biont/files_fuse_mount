@@ -29,5 +29,8 @@ So there is a lot of stuff missing that you might expect:
 * Integration of common linux concepts like ownership/permissions and locking (where possible, correlating Nextcloud concepts are applied though)
 
 # Troubleshooting
-## Failed loading 'libfuse.so'
+## *Failed loading 'libfuse.so'*
 Make sure your system has the required packages. On Debian for example, you need `fuse` and `libfuse-dev`
+## */dev/fuse not found!*
+[Check that your user has acces to that file](https://superuser.com/questions/466304/how-do-i-make-sshfs-work-in-debian-i-get-dev-fuse-permission-denied)
+If you're seeing the error inside a container, ensure that you are passing the /dev/fuse device into it

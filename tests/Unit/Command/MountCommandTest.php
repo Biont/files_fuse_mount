@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace OCA\FuseMount\Tests\Unit\Command;
 
 use Fuse\Mounter;
+use OC\Files\View;
 use OCA\FuseMount\Command\Mount;
+use OCA\FuseMount\Filesystem\FilesystemFactory;
 use OCA\FuseMount\Filesystem\UserFileSystem;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -19,11 +21,10 @@ class MountCommandTest extends TestCase
 
 	public function testConfigureRejectsMissingUserConfig()
 	{
-		$mounter = \Mockery::mock('overload:'.Mounter::class);
+		$mounter = \Mockery::mock('overload:' . Mounter::class);
 		$mounter->expects('mount');
-		$iConfig = \Mockery::mock(IConfig::class);
-		$iRootFolder = \Mockery::mock(IRootFolder::class);
-		$command = new Mount($iConfig, $iRootFolder);
+		$filesystemFactory = \Mockery::mock(FilesystemFactory::class);
+		$command = new Mount($filesystemFactory);
 		//$this->expectException(RuntimeException::class);
 		$commandTester = new CommandTester($command);
 		$commandTester->execute([
@@ -36,15 +37,10 @@ class MountCommandTest extends TestCase
 	public function testConfigureRejectsMissingMountPoint()
 	{
 		$users = ['admin', 'heinz'];
-		$mounter = \Mockery::mock('overload:'.Mounter::class);
+		$mounter = \Mockery::mock('overload:' . Mounter::class);
 		$mounter->expects('mount');
-		$iConfig = \Mockery::mock(IConfig::class);
-		$iRootFolder = \Mockery::mock(IRootFolder::class);
-		foreach ($users as $user) {
-			$userRootFolder = \Mockery::mock(Folder::class);
-			$iRootFolder->expects('getUserFolder')->once()->with($user)->andReturn($userRootFolder);
-		}
-		$command = new Mount($iConfig, $iRootFolder);
+		$filesystemFactory = \Mockery::mock(FilesystemFactory::class);
+		$command = new Mount($filesystemFactory);
 		$this->expectException(RuntimeException::class);
 		$commandTester = new CommandTester($command);
 		$commandTester->execute([
@@ -55,15 +51,11 @@ class MountCommandTest extends TestCase
 	public function testConfigureAcceptsMultipleUsers()
 	{
 		$users = ['admin', 'heinz'];
-		$mounter = \Mockery::mock('overload:'.Mounter::class);
+		$mounter = \Mockery::mock('overload:' . Mounter::class);
 		$mounter->expects('mount');
-		$iConfig = \Mockery::mock(IConfig::class);
-		$iRootFolder = \Mockery::mock(IRootFolder::class);
-		foreach ($users as $user) {
-			$userRootFolder = \Mockery::mock(Folder::class);
-			$iRootFolder->expects('getUserFolder')->once()->with($user)->andReturn($userRootFolder);
-		}
-		$command = new Mount($iConfig, $iRootFolder);
+		$filesystemFactory = \Mockery::mock(FilesystemFactory::class);
+		$filesystemFactory->expects('createForUsers');
+		$command = new Mount($filesystemFactory);
 		$commandTester = new CommandTester($command);
 		$commandTester->execute([
 			'-u' => $users,

@@ -13,6 +13,7 @@ use OC\Memcache\Memcached;
 use OC\Memcache\NullCache;
 use OC\Memcache\Redis;
 use OCA\FuseMount\Filesystem\DelegatingUserFilesystem;
+use OCA\FuseMount\Filesystem\FilesystemFactory;
 use OCA\FuseMount\Filesystem\UserFileSystem;
 use OCP\Files\IRootFolder;
 use OCP\IConfig;
@@ -25,17 +26,13 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Mount extends Base
 {
 
-	private IRootFolder $storage;
-
-	private IConfig $config;
+	private FilesystemFactory $filesystemFactory;
 
 	public function __construct(
-		IConfig $config,
-		IRootFolder $storage
+		FilesystemFactory $filesystemFactory
 	) {
-		$this->storage = $storage;
-		$this->config = $config;
 		parent::__construct();
+		$this->filesystemFactory = $filesystemFactory;
 	}
 
 	protected function configure()
@@ -57,21 +54,6 @@ class Mount extends Base
 				'Specify the user of the target filesystem. Can be passed multiple times.'
 				.' If multiple users are configured, the filesystem will contain the individual user folders at its root'
 			);
-	}
-
-	private function assertValidCache()
-	{
-		$validCacheClasses = [
-			Redis::class,
-			Memcached::class,
-			NullCache::class,
-		];
-		$localCacheClass = $this->config->getSystemValue('memcache.local', null);
-		if (!$localCacheClass || !in_array(ltrim($localCacheClass, '\\'), $validCacheClasses, true)) {
-			throw new \Exception(
-				'"memcache.local" MUST be set to one of the following: '.implode(', ', $validCacheClasses)
-			);
-		}
 	}
 
 	private function tryCompileUserList(InputInterface $input): array
@@ -96,6 +78,10 @@ class Mount extends Base
 		);
 	}
 
+	/**
+	 * @throws \OCP\Files\NotPermittedException
+	 * @throws \OC\User\NoUserException
+	 */
 	protected function execute(InputInterface $input, OutputInterface $output): int
 	{
 		//$this->assertValidCache();
@@ -130,7 +116,7 @@ class Mount extends Base
 			$mountPoint,
 		];
 
-		$mounter->mount($mountPoint, $this->createFilesystem($users), $debug);
+		$mounter->mount($mountPoint, $this->filesystemFactory->createForUsers(...$users), $debug);
 
 		return 0;
 	}
@@ -144,14 +130,6 @@ class Mount extends Base
 	 */
 	private function createFilesystem(array $users): FilesystemInterface
 	{
-		if (count($users) === 1) {
-			return new UserFileSystem($users[0], $this->storage->getUserFolder($users[0]));
-		}
-		$filesystem = new DelegatingUserFilesystem(new View('/'));
-		foreach ($users as $user) {
-			$filesystem->pushUserFilesystem($user, new UserFileSystem($user, $this->storage->getUserFolder($user)));
-		}
 
-		return $filesystem;
 	}
 }
