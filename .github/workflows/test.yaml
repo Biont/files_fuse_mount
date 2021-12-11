@@ -40,15 +40,15 @@ jobs:
             - name: Run tests
               working-directory: nextcloud/apps/files_fuse_mount
               run: composer run test:unit
-              env:
-                  XDEBUG_MODE: coverage
-            - name: Report coverage
-              uses: codecov/codecov-action@v2.1.0
-              if: ${{ always() && matrix.nextcloud-versions == 'master' }}
-              with:
-                  file: ./nextcloud/apps/files_fuse_mount/tests/clover.unit.xml
-                  flags: unittests
-                  fail_ci_if_error: true
+#              env:
+#                  XDEBUG_MODE: coverage
+#            - name: Report coverage
+#              uses: codecov/codecov-action@v2.1.0
+#              if: ${{ always() && matrix.nextcloud-versions == 'master' }}
+#              with:
+#                  file: ./nextcloud/apps/files_fuse_mount/tests/clover.unit.xml
+#                  flags: unittests
+#                  fail_ci_if_error: true
 
     integration-tests:
         runs-on: ubuntu-latest
@@ -120,8 +120,8 @@ jobs:
                 export NC_USER_1=admin
                 export NC_USER_2=user
                 cd nextcloud/apps/files_fuse_mount && composer run test:integration
-              env:
-                  XDEBUG_MODE: coverage
+#              env:
+#                  XDEBUG_MODE: coverage
 #            - name: Print debug logs
 #              if: ${{ always() }}
 #              run: cat nextcloud/data/horde_*.log
