@@ -2,6 +2,8 @@
 	"prefer-stable": true,
 	"minimum-stability": "stable",
 	"require": {
+		"php": "^7.4|^8.0",
+		"ext-ffi": "*",
 		"sj-i/php-fuse": "dev-master",
 		"sj-i/phpdoc-type-reader": "dev-master as v0.1.1",
 		"christophwurst/nextcloud_testing": "^0.12.4"
