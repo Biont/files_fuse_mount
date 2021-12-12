@@ -1,4 +1,5 @@
 # Files FUSE Mount
+[![Test](https://github.com/Biont/files_fuse_mount/actions/workflows/test.yaml/badge.svg)](https://github.com/Biont/files_fuse_mount/actions/workflows/test.yaml)
 
 Expose a user's Nextcloud storage as a filesystem. Every reading & writing operation in this filesystem is controlled by Nextcloud and its filesystem API.
 This has some key benefits over direct filesystem access:
