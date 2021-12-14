@@ -1,0 +1,31 @@
+on:
+    release:
+        types: [created]
+
+name: Upload Release Asset
+
+jobs:
+    build:
+        name: Upload Release Asset
+        runs-on: ubuntu-latest
+        steps:
+            - uses: shivammathur/setup-php@v2
+            # Store the current version to be released as an environment variable
+#            - name: Get the version
+#              id: get_version
+#              run: echo ::set-output name=version::${GITHUB_REF#refs/tags/}
+            - name: Checkout code
+              uses: actions/checkout@v2
+            - name: Install Krankerl
+              run: |
+                  wget https://github.com/ChristophWurst/krankerl/releases/download/v0.13.0/krankerl_0.13.0_amd64.deb
+                  sudo dpkg -i krankerl_0.13.0_amd64.deb
+            - name: Package app
+              run: krankerl package
+            - name: Package app
+              run: krankerl package
+            - name: Upload Release Asset
+              id: upload-release-asset
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: build/artifacts/files_fuse_mount.tar.gz
