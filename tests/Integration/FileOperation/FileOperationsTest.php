@@ -121,4 +121,24 @@ class FileOperationsTest extends MountedFilesystemTestcase
 		$this->assertFalse($this->firstUserNextcloudRoot()->nodeExists($fileName));
 		$this->assertTrue($this->secondUserNextcloudRoot()->nodeExists($fileName));
 	}
+
+	public function testFileStatReturnsAsExpected()
+	{
+		/**
+		 * Create file on FUSE fs
+		 */
+		$fileName = '/'.uniqid('testFile_').'.txt';
+		$fsPath = $this->firstUserFsPath($fileName);
+		$fileContents = 'Lorem ipsum';
+		file_put_contents($fsPath, $fileContents);
+		sleep(1); // Seems like this is not a synchronous task
+
+		$stat = stat($fsPath);
+		$size = $stat['size'];
+		$this->assertSame(
+			strlen($fileContents),
+			$size,
+			'File should report the expected size'
+		);
+	}
 }
