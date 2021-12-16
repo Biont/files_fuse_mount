@@ -4,19 +4,9 @@ declare(strict_types=1);
 
 namespace OCA\FuseMount\Command;
 
-use Fuse\FilesystemInterface;
-use Fuse\FuseOperations;
 use Fuse\Mounter;
 use OC\Core\Command\Base;
-use OC\Files\View;
-use OC\Memcache\Memcached;
-use OC\Memcache\NullCache;
-use OC\Memcache\Redis;
-use OCA\FuseMount\Filesystem\DelegatingUserFilesystem;
 use OCA\FuseMount\Filesystem\FilesystemFactory;
-use OCA\FuseMount\Filesystem\UserFileSystem;
-use OCP\Files\IRootFolder;
-use OCP\IConfig;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -53,6 +43,13 @@ class Mount extends Base
 				InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
 				'Specify the user of the target filesystem. Can be passed multiple times.'
 				.' If multiple users are configured, the filesystem will contain the individual user folders at its root'
+			)
+			->addOption(
+				'mount_options',
+				'o',
+				InputOption::VALUE_REQUIRED,
+				'Mount options to pass into FUSE. Default: "auto_cache,async,noatime"',
+				'auto_cache,async,noatime'
 			);
 	}
 
@@ -84,7 +81,6 @@ class Mount extends Base
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output): int
 	{
-		//$this->assertValidCache();
 		try {
 			$mounter = new Mounter();
 		} catch (\Throwable $exception) {
@@ -106,30 +102,19 @@ class Mount extends Base
 			return 1;
 		}
 		$mountPoint = $input->getArgument('mount_point');
-
+		$mountOptions = $input->getOption('mount_options');;
 		$debug = null;
 		$debug = [
 			'',
 			'-d',
 			'-s',
 			'-f',
+			'-o'.$mountOptions,
 			$mountPoint,
 		];
 
 		$mounter->mount($mountPoint, $this->filesystemFactory->createForUsers(...$users), $debug);
 
 		return 0;
-	}
-
-	/**
-	 * @param array $users
-	 *
-	 * @return FilesystemInterface
-	 * @throws \OCP\Files\NotPermittedException
-	 * @throws \OC\User\NoUserException
-	 */
-	private function createFilesystem(array $users): FilesystemInterface
-	{
-
 	}
 }
