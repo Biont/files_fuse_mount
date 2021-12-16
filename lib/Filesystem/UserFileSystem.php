@@ -97,67 +97,10 @@ class UserFileSystem implements FilesystemInterface
 
 	private function getPermissions(Node $node): int
 	{
-		return
-			$this->getOwnerPermissions($node)
-			+ $this->getGroupPermissions($node)
-			+ $this->getOtherPermissions($node);
-	}
-
-	private function getOwnerPermissions(Node $node): int
-	{
-		switch (true) {
-			case $node->isUpdateable():
-				$octal = 0600;
-				break;
-			case  $node->isReadable():
-				$octal = 0400;
-				break;
-			default:
-				$octal = 0000;
-		}
 		if ($node instanceof Folder) {
-			$octal += 0100;
+			return 0755;
 		}
-
-		return $octal;
-	}
-
-	private function getGroupPermissions(Node $node): int
-	{
-		switch (true) {
-			case $node->isUpdateable():
-				$octal = 0060;
-				break;
-			case  $node->isReadable():
-				$octal = 0040;
-				break;
-			default:
-				$octal = 0000;
-		}
-		if ($node instanceof Folder) {
-			$octal += 0010;
-		}
-
-		return $octal;
-	}
-
-	private function getOtherPermissions(Node $node): int
-	{
-		switch (true) {
-			case $node->isUpdateable():
-				$octal = 0006;
-				break;
-			case  $node->isReadable():
-				$octal = 0004;
-				break;
-			default:
-				$octal = 0000;
-		}
-		if ($node instanceof Folder) {
-			$octal += 0001;
-		}
-
-		return $octal;
+		return 0644;
 	}
 
 	public function open(string $path, FuseFileInfo $fuse_file_info): int
