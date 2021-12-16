@@ -72,7 +72,7 @@ class DelegatingUserFilesystem implements FilesystemInterface
 	public function getattr(string $path, Stat $stat): int
 	{
 		if ($path === '/') {
-			$stat->st_mode = Stat::S_IFDIR | 0600;
+			$stat->st_mode = Stat::S_IFDIR | 0755;
 			$stat->st_nlink = 1;
 			$stat->st_size = $this->getCombinedSize();
 			$stat->st_uid = getmyuid();
@@ -84,7 +84,10 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		}
 		if ($this->isFirstLevel($path)) {
 			$fs = $this->getFilesystemForUser($this->getUserFromPath($path));
-			$stat->st_mode = Stat::S_IFDIR | 0600;
+			if (!$fs) {
+				return -Errno::ENOSYS;
+			}
+			$stat->st_mode = Stat::S_IFDIR | 0755;
 			$stat->st_nlink = 1;
 			$stat->st_size = $fs->getNodeSize('/');
 			$stat->st_uid = getmyuid();
@@ -144,10 +147,18 @@ class DelegatingUserFilesystem implements FilesystemInterface
 		return reset($segments);
 	}
 
-	private function getFilesystemForUser(string $user): UserFileSystem
+	/**
+	 * Some shells/environments automatically look for random meta files like '.Trash', 'autorun.inf' and so on.
+	 * Therefore, we need to allow this function to fail despite completely owning the directory structure....
+	 *
+	 * @param string $user
+	 *
+	 * @return \OCA\FuseMount\Filesystem\UserFileSystem|null
+	 */
+	private function getFilesystemForUser(string $user): ?UserFileSystem
 	{
 		if (!isset($this->stack[$user])) {
-			//TODO throw sth
+			return null;
 		}
 
 		return $this->stack[$user];

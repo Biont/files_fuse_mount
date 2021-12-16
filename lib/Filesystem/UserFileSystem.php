@@ -91,19 +91,73 @@ class UserFileSystem implements FilesystemInterface
 		$mode = $node instanceof Folder
 			? Stat::S_IFDIR
 			: Stat::S_IFREG;
-		try {
-			switch (true) {
-				case $node->isUpdateable():
-					return $mode | 0600;
-				case  $node->isReadable():
-					return $mode | 0400;
-				default:
-					return $mode | 0000;
-			}
-		} catch (InvalidPathException|NotFoundException $e) {
-		} finally {
-			return $mode | 0000;
+
+		return $mode | $this->getPermissions($node);
+	}
+
+	private function getPermissions(Node $node): int
+	{
+		return
+			$this->getOwnerPermissions($node)
+			+ $this->getGroupPermissions($node)
+			+ $this->getOtherPermissions($node);
+	}
+
+	private function getOwnerPermissions(Node $node): int
+	{
+		switch (true) {
+			case $node->isUpdateable():
+				$octal = 0600;
+				break;
+			case  $node->isReadable():
+				$octal = 0400;
+				break;
+			default:
+				$octal = 0000;
 		}
+		if ($node instanceof Folder) {
+			$octal += 0100;
+		}
+
+		return $octal;
+	}
+
+	private function getGroupPermissions(Node $node): int
+	{
+		switch (true) {
+			case $node->isUpdateable():
+				$octal = 0060;
+				break;
+			case  $node->isReadable():
+				$octal = 0040;
+				break;
+			default:
+				$octal = 0000;
+		}
+		if ($node instanceof Folder) {
+			$octal += 0010;
+		}
+
+		return $octal;
+	}
+
+	private function getOtherPermissions(Node $node): int
+	{
+		switch (true) {
+			case $node->isUpdateable():
+				$octal = 0006;
+				break;
+			case  $node->isReadable():
+				$octal = 0004;
+				break;
+			default:
+				$octal = 0000;
+		}
+		if ($node instanceof Folder) {
+			$octal += 0001;
+		}
+
+		return $octal;
 	}
 
 	public function open(string $path, FuseFileInfo $fuse_file_info): int
@@ -289,7 +343,7 @@ class UserFileSystem implements FilesystemInterface
 			$utime_buf->modtime = $node->getMTime();
 
 			return 0;
-		} catch (InvalidPathException|NotPermittedException $e) {
+		} catch (InvalidPathException $e) {
 			return -1;
 		} catch (NotFoundException $e) {
 			return -2;
@@ -310,21 +364,23 @@ class UserFileSystem implements FilesystemInterface
 		return 0;
 	}
 
-	/**
-	 * @throws NotFoundException
-	 * @throws InvalidPathException
-	 */
 	public function getNodeSize(string $path): int
 	{
-		return $this->rootNode->get($path)->getSize();
+		try {
+			return $this->rootNode->get($path)->getSize();
+		} catch (InvalidPathException $e) {
+		} catch (NotFoundException $e) {
+			return 0;
+		}
 	}
 
-	/**
-	 * @throws NotFoundException
-	 * @throws InvalidPathException
-	 */
 	public function getNodeMTime(string $path): int
 	{
-		return $this->rootNode->get($path)->getMTime();
+		try {
+			return $this->rootNode->get($path)->getMTime();
+		} catch (InvalidPathException $e) {
+		} catch (NotFoundException $e) {
+			return 0;
+		}
 	}
 }
