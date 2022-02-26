@@ -8,7 +8,7 @@
 		"sj-i/phpdoc-type-reader": "dev-master as v0.1.1"
 	},
 	"require-dev": {
-		"christophwurst/nextcloud": "^22.1.1",
+		"christophwurst/nextcloud": "^23.0.2",
 		"christophwurst/nextcloud_testing": "^0.12.4",
 		"phpunit/phpunit": "^9.5",
 		"psalm/phar": "^4.6",
