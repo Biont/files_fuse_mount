@@ -31,7 +31,7 @@ jobs:
             - name: Install Nextcloud
               run: php -f nextcloud/occ maintenance:install --database-name oc_autotest --database-user oc_autotest --admin-user admin --admin-pass admin --database sqlite --database-pass=''
             - name: Checkout Files FUSE Mount
-              uses: actions/checkout@master
+              uses: actions/checkout@v3
               with:
                   path: nextcloud/apps/files_fuse_mount
             - name: Install dependencies
@@ -103,7 +103,7 @@ jobs:
             - name: Add a second user
               run: OC_PASS=user php -f nextcloud/occ user:add --password-from-env user
             - name: Checkout Plugin
-              uses: actions/checkout@master
+              uses: actions/checkout@v3
               with:
                   path: nextcloud/apps/files_fuse_mount
             - name: Install dependencies

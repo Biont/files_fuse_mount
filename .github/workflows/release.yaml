@@ -15,7 +15,7 @@ jobs:
 #              id: get_version
 #              run: echo ::set-output name=version::${GITHUB_REF#refs/tags/}
             - name: Checkout code
-              uses: actions/checkout@v2
+              uses: actions/checkout@v3
             - name: Install Krankerl
               run: |
                   wget https://github.com/ChristophWurst/krankerl/releases/download/v0.13.0/krankerl_0.13.0_amd64.deb
