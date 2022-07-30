@@ -1491,16 +1491,16 @@
         },
         {
             "name": "psalm/phar",
-            "version": "4.19.0",
+            "version": "v4.25.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/psalm/phar.git",
-                "reference": "de599ce185277138c5ea6af9a06574dc3b7acef9"
+                "reference": "c9730e19eb1afae9c34b7264b3d8e131570ad41d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/psalm/phar/zipball/de599ce185277138c5ea6af9a06574dc3b7acef9",
-                "reference": "de599ce185277138c5ea6af9a06574dc3b7acef9",
+                "url": "https://api.github.com/repos/psalm/phar/zipball/c9730e19eb1afae9c34b7264b3d8e131570ad41d",
+                "reference": "c9730e19eb1afae9c34b7264b3d8e131570ad41d",
                 "shasum": ""
             },
             "require": {
@@ -1520,9 +1520,9 @@
             "description": "Composer-based Psalm Phar",
             "support": {
                 "issues": "https://github.com/psalm/phar/issues",
-                "source": "https://github.com/psalm/phar/tree/4.19.0"
+                "source": "https://github.com/psalm/phar/tree/v4.25.0"
             },
-            "time": "2022-01-28T06:40:04+00:00"
+            "time": "2022-07-28T17:07:24+00:00"
         },
         {
             "name": "psr/container",
@@ -4034,5 +4034,5 @@
         "ext-ffi": "*"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.2.0"
+    "plugin-api-version": "2.3.0"
 }
