@@ -9,7 +9,7 @@ jobs:
         name: Upload Release Asset
         runs-on: ubuntu-latest
         steps:
-            - uses: shivammathur/setup-php@v2
+            - uses: shivammathur/setup-php@2.21.2
             # Store the current version to be released as an environment variable
 #            - name: Get the version
 #              id: get_version

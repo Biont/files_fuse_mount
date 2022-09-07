@@ -20,7 +20,7 @@ jobs:
         name: Nextcloud ${{ matrix.nextcloud-versions }} php${{ matrix.php-versions }} unit tests
         steps:
             - name: Set up php${{ matrix.php-versions }}
-              uses: shivammathur/setup-php@2.16.0
+              uses: shivammathur/setup-php@2.21.2
               with:
                   php-version: ${{ matrix.php-versions }}
                   #tools: composer:v1
@@ -88,7 +88,7 @@ jobs:
                     --health-retries 5
         steps:
             - name: Set up php${{ matrix.php-versions }}
-              uses: shivammathur/setup-php@master
+              uses: shivammathur/setup-php@2.21.2
               with:
                   php-version: ${{ matrix.php-versions }}
                   tools: composer:v2
